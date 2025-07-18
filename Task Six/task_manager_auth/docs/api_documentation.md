@@ -4,15 +4,15 @@ This is a simple Task Management API with JWT authentication and role-based acce
 
 ---
 
-## 📖 API Documentation
+## API Documentation
 
-### 🔑 Authentication
+### Authentication
 
-#### ✅ Register a new user
+#### Register a new user
 
-`POST /register`
+POST /register
 
-**Request body**
+Request body:
 
 ```json
 {
@@ -21,7 +21,7 @@ This is a simple Task Management API with JWT authentication and role-based acce
 }
 ```
 
-**Response**
+Response:
 
 ```json
 {
@@ -33,11 +33,11 @@ This is a simple Task Management API with JWT authentication and role-based acce
 
 ---
 
-#### ✅ Login
+#### Login
 
-`POST /login`
+POST /login
 
-**Request body**
+Request body:
 
 ```json
 {
@@ -46,7 +46,7 @@ This is a simple Task Management API with JWT authentication and role-based acce
 }
 ```
 
-**Response**
+Response:
 
 ```json
 {
@@ -59,13 +59,13 @@ This is a simple Task Management API with JWT authentication and role-based acce
 
 ---
 
-### 📝 Tasks
+### Tasks
 
-#### ✅ Get all tasks (Public)
+#### Get all tasks (Public)
 
-`GET /tasks`
+GET /tasks
 
-**Response**
+Response:
 
 ```json
 [
@@ -83,11 +83,11 @@ This is a simple Task Management API with JWT authentication and role-based acce
 
 ---
 
-#### ✅ Get task by ID (Public)
+#### Get task by ID (Public)
 
-`GET /tasks/:id`
+GET /tasks/\:id
 
-**Response**
+Response:
 
 ```json
 {
@@ -103,17 +103,17 @@ This is a simple Task Management API with JWT authentication and role-based acce
 
 ---
 
-#### ✅ Create task (Admin only)
+#### Create task (Admin only)
 
-`POST /tasks`
+POST /tasks
 
-**Headers**
+Headers:
 
 ```
 Authorization: Bearer <token>
 ```
 
-**Request body**
+Request body:
 
 ```json
 {
@@ -124,7 +124,7 @@ Authorization: Bearer <token>
 }
 ```
 
-**Response**
+Response:
 
 ```json
 {
@@ -140,17 +140,17 @@ Authorization: Bearer <token>
 
 ---
 
-#### ✅ Update task (Admin only)
+#### Update task (Admin only)
 
-`PUT /tasks/:id`
+PUT /tasks/\:id
 
-**Headers**
+Headers:
 
 ```
 Authorization: Bearer <token>
 ```
 
-**Request body**
+Request body:
 
 ```json
 {
@@ -161,7 +161,7 @@ Authorization: Bearer <token>
 }
 ```
 
-**Response**
+Response:
 
 ```json
 {
@@ -177,17 +177,17 @@ Authorization: Bearer <token>
 
 ---
 
-#### ✅ Delete task (Admin only)
+#### Delete task (Admin only)
 
-`DELETE /tasks/:id`
+DELETE /tasks/\:id
 
-**Headers**
+Headers:
 
 ```
 Authorization: Bearer <token>
 ```
 
-**Response**
+Response:
 
 ```json
 {
@@ -197,19 +197,19 @@ Authorization: Bearer <token>
 
 ---
 
-### 👑 Admin
+### Admin
 
-#### ✅ Promote user to admin (Admin only)
+#### Promote user to admin (Admin only)
 
-`POST /promote`
+POST /promote
 
-**Headers**
+Headers:
 
 ```
 Authorization: Bearer <token>
 ```
 
-**Request body**
+Request body:
 
 ```json
 {
@@ -217,7 +217,7 @@ Authorization: Bearer <token>
 }
 ```
 
-**Response**
+Response:
 
 ```json
 {
@@ -227,46 +227,46 @@ Authorization: Bearer <token>
 
 ---
 
-## 📌 Notes
+## Notes
 
-- All **admin routes** require a valid JWT token with `role: admin`.
-- The **first registered user** automatically becomes an admin.
-- Subsequent users are **regular users** unless promoted by an admin.
+- All admin routes require a valid JWT token with admin privileges.
+- The first registered user automatically becomes an admin.
+- Subsequent users are regular users unless promoted by an admin.
 
 ---
 
-## ✅ Features
+## Features
 
 1. Preserves all your existing code
-2. Adds **JWT authentication**
-3. Implements **role-based authorization** (admin/user)
-4. Follows the required **folder structure**
+2. Adds JWT authentication
+3. Implements role-based authorization (admin/user)
+4. Follows the required folder structure
 5. Includes all the required endpoints
-6. Secures passwords with **bcrypt hashing**
-7. Provides proper **API documentation**
+6. Secures passwords with bcrypt hashing
+7. Provides proper API documentation
 
 ---
 
-## 🚀 How to Use
+## How to Use
 
-1. **Register a user** → The first user will be **admin**
-2. **Login** to get a JWT token
-3. Use the token in the `Authorization` header for protected routes
-4. Admins can **promote other users** to admin using the `/promote` endpoint
-
----
-
-## 🛠 Example Workflow
-
-1. `POST /register` → create first admin
-2. `POST /login` → get admin JWT token
-3. `POST /tasks` → create tasks (requires admin token)
-4. `POST /register` → create normal user
-5. `POST /promote` → promote normal user to admin
+1. Register a user (the first user will be admin)
+2. Login to get a JWT token
+3. Use the token in the Authorization header for protected routes
+4. Admins can promote other users to admin using the `/promote` endpoint
 
 ---
 
-## 📂 Folder Structure
+## Example Workflow
+
+1. POST /register → create first admin
+2. POST /login → get admin JWT token
+3. POST /tasks → create tasks (requires admin token)
+4. POST /register → create normal user
+5. POST /promote → promote normal user to admin
+
+---
+
+## Folder Structure
 
 ```
 .
@@ -279,7 +279,7 @@ Authorization: Bearer <token>
 
 ---
 
-## 🧑‍💻 Tech Stack
+## Tech Stack
 
 - Go (Golang)
 - MongoDB
