@@ -56,7 +56,7 @@ func (s *UserService) Register(user models.User) (*models.User, error) {
 	if count == 0 {
 		user.Role = models.RoleAdmin
 	} else {
-		user.Role = models.RoleAdmin
+		user.Role = models.RoleUser
 	}
 	user.ID = primitive.NewObjectID()
 	_, err = s.Collection.InsertOne(c, user)

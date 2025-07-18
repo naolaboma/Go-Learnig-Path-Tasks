@@ -84,7 +84,7 @@ Request body:
 {
 "title": "string",
 "description": "string",
-"due_date": "string",
+"due_date": "string", //e.g "2025-09-01T17:00:00Z"
 "status": "string"
 }
 
@@ -93,7 +93,7 @@ Response:
 "id": "string",
 "title": "string",
 "description": "string",
-"due_date": "string",
+"due_date": "string", //e.g "2025-09-01T17:00:00Z"
 "status": "string",
 "created_at": "string",
 "updated_at": "string"
@@ -110,7 +110,7 @@ Request body:
 {
 "title": "string",
 "description": "string",
-"due_date": "string",
+"due_date": "string", // e.g 2025-09-01T17:00:00Z
 "status": "string"
 }
 
@@ -119,7 +119,7 @@ Response:
 "id": "string",
 "title": "string",
 "description": "string",
-"due_date": "string",
+"due_date": "string", // e.g "2025-09-01T17:00:00Z"
 "status": "string",
 "created_at": "string",
 "updated_at": "string"

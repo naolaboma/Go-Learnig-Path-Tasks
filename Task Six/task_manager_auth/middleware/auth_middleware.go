@@ -64,7 +64,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 func AdminOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		role, exists := c.Get("Role")
+		role, exists := c.Get("role")
 		if !exists || role != models.RoleAdmin {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "admin access required"})
 			return
