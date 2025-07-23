@@ -1,4 +1,3 @@
-// Delivery/main.go
 package main
 
 import (
@@ -7,8 +6,6 @@ import (
 	"os"
 	"task-manager/Delivery/controllers"
 	"task-manager/Delivery/routers"
-	"task-manager/Domain"
-	"task-manager/Infrastructure"
 	"task-manager/Repositories"
 	"task-manager/Usecases"
 
@@ -24,12 +21,22 @@ func main() {
 
 	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(mongoURI))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
-	defer client.Disconnect(context.Background())
+	defer func() {
+		if err = client.Disconnect(context.Background()); err != nil {
+			log.Fatalf("Failed to disconnect from MongoDB: %v", err)
+		}
+	}()
+
+	// Ping the primary
+	if err := client.Ping(context.Background(), nil); err != nil {
+		log.Fatalf("Failed to ping MongoDB: %v", err)
+	}
+	log.Println("Successfully connected and pinged MongoDB.")
 
 	database := client.Database("task_manager_db")
-	
+
 	// Initialize repositories
 	taskRepo := repositories.NewTaskRepository(database.Collection("tasks"))
 	userRepo := repositories.NewUserRepository(database.Collection("users"))
@@ -47,6 +54,6 @@ func main() {
 
 	log.Println("Starting server on :8080")
 	if err := r.Run(":8080"); err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to run server: ", err)
 	}
 }

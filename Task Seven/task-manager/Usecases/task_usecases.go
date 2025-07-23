@@ -1,4 +1,3 @@
-// Usecases/task_usecases.go
 package usecases
 
 import "task-manager/Domain"
@@ -15,4 +14,18 @@ func (uc *TaskUseCase) GetAllTasks() ([]domain.Task, error) {
 	return uc.taskRepo.GetAll()
 }
 
-// Implement other TaskUseCase methods...
+func (uc *TaskUseCase) GetTaskByID(id string) (*domain.Task, error) {
+	return uc.taskRepo.GetByID(id)
+}
+
+func (uc *TaskUseCase) CreateTask(task domain.Task) (*domain.Task, error) {
+	return uc.taskRepo.Create(task)
+}
+
+func (uc *TaskUseCase) UpdateTask(id string, task domain.Task) (*domain.Task, error) {
+	return uc.taskRepo.Update(id, task)
+}
+
+func (uc *TaskUseCase) DeleteTask(id string) error {
+	return uc.taskRepo.Delete(id)
+}

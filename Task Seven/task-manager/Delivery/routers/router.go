@@ -1,4 +1,3 @@
-// Delivery/routers/router.go
 package routers
 
 import (
@@ -14,17 +13,30 @@ func SetupRouter(taskController *controllers.TaskController, userController *con
 	// Public routes
 	r.POST("/register", userController.Register)
 	r.POST("/login", userController.Login)
-	r.GET("/tasks", taskController.GetAllTasks)
-	r.GET("/tasks/:id", taskController.GetTaskByID)
 
-	// Protected routes
-	authRoutes := r.Group("/")
-	authRoutes.Use(infrastructure.AuthMiddleware())
+	// All task routes require authentication
+	taskRoutes := r.Group("/tasks")
+	taskRoutes.Use(infrastructure.AuthMiddleware())
 	{
-		authRoutes.POST("/tasks", taskController.CreateTask)
-		authRoutes.PUT("/tasks/:id", taskController.UpdateTask)
-		authRoutes.DELETE("/tasks/:id", taskController.DeleteTask)
-		authRoutes.POST("/promote", userController.PromoteUser)
+		taskRoutes.GET("/", taskController.GetAllTasks)
+		taskRoutes.GET("/:id", taskController.GetTaskByID)
+
+		// Admin-only task routes
+		adminTaskRoutes := taskRoutes.Group("/")
+		adminTaskRoutes.Use(infrastructure.AdminOnly())
+		{
+			adminTaskRoutes.POST("/", taskController.CreateTask)
+			adminTaskRoutes.PUT("/:id", taskController.UpdateTask)
+			adminTaskRoutes.DELETE("/:id", taskController.DeleteTask)
+		}
 	}
+
+	// Admin-only user management routes
+	adminRoutes := r.Group("/admin")
+	adminRoutes.Use(infrastructure.AuthMiddleware(), infrastructure.AdminOnly())
+	{
+		adminRoutes.POST("/promote", userController.PromoteUser)
+	}
+
 	return r
 }

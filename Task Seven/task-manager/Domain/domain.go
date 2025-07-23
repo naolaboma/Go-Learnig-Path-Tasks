@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// Role defines the user roles
 type Role string
 
 const (
@@ -11,6 +12,7 @@ const (
 	RoleUser  Role = "user"
 )
 
+// Task represents a task in the system
 type Task struct {
 	ID          string    `json:"id" bson:"_id,omitempty"`
 	Title       string    `json:"title" bson:"title"`
@@ -21,14 +23,15 @@ type Task struct {
 	UpdatedAt   time.Time `json:"updated_at" bson:"updated_at"`
 }
 
+// User represents a user in the system
 type User struct {
 	ID       string `json:"id" bson:"_id,omitempty"`
 	Username string `json:"username" bson:"username"`
-	Password string `json:"password" bson:"password"`
+	Password string `json:"password,omitempty" bson:"password"` // Use omitempty for security
 	Role     Role   `json:"role" bson:"role"`
 }
 
-// Repository Interfaces
+// TaskRepository defines the interface for task persistence
 type TaskRepository interface {
 	GetAll() ([]Task, error)
 	GetByID(id string) (*Task, error)
@@ -37,14 +40,15 @@ type TaskRepository interface {
 	Delete(id string) error
 }
 
+// UserRepository defines the interface for user persistence
 type UserRepository interface {
-	Register(user User) (*User, error)
-	Login(username, password string) (*User, error)
-	PromoteUser(username string, promoterID string) error
+	Create(user User) (*User, error)
+	GetByUsername(username string) (*User, error)
+	Promote(username string) error
 	GetByID(id string) (*User, error)
 }
 
-// Use Case Interfaces
+// TaskUseCase defines the business logic for tasks
 type TaskUseCase interface {
 	GetAllTasks() ([]Task, error)
 	GetTaskByID(id string) (*Task, error)
@@ -53,8 +57,9 @@ type TaskUseCase interface {
 	DeleteTask(id string) error
 }
 
+// UserUseCase defines the business logic for users
 type UserUseCase interface {
 	Register(user User) (*User, error)
-	Login(username, password string) (*User, error)
+	Login(username, password string) (string, error) // Returns JWT token
 	PromoteUser(username string, promoterID string) error
 }
