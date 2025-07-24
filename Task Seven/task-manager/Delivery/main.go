@@ -37,19 +37,15 @@ func main() {
 
 	database := client.Database("task_manager_db")
 
-	// Initialize repositories
 	taskRepo := repositories.NewTaskRepository(database.Collection("tasks"))
 	userRepo := repositories.NewUserRepository(database.Collection("users"))
 
-	// Initialize use cases
 	taskUseCase := usecases.NewTaskUseCase(taskRepo)
 	userUseCase := usecases.NewUserUseCase(userRepo)
 
-	// Initialize controllers
 	taskController := controllers.NewTaskController(taskUseCase)
 	userController := controllers.NewUserController(userUseCase)
 
-	// Setup router
 	r := routers.SetupRouter(taskController, userController)
 
 	log.Println("Starting server on :8080")

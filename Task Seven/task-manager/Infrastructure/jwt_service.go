@@ -7,10 +7,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// jwtSecret be loaded from a secure configuration.
 var jwtSecret = []byte("your-very-secret-key")
 
-// define the structure of the JWT claims.
 type Claims struct {
 	UserID   string      `json:"user_id"`
 	Username string      `json:"username"`
@@ -18,7 +16,6 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// create a new JWT token for a given user.
 func GenerateJWT(user *domain.User) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{

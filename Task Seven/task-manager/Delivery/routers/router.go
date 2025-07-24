@@ -10,11 +10,9 @@ import (
 func SetupRouter(taskController *controllers.TaskController, userController *controllers.UserController) *gin.Engine {
 	r := gin.Default()
 
-	// Public routes
 	r.POST("/register", userController.Register)
 	r.POST("/login", userController.Login)
 
-	// All task routes require authentication
 	taskRoutes := r.Group("/tasks")
 	taskRoutes.Use(infrastructure.AuthMiddleware())
 	{
