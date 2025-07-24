@@ -3,13 +3,13 @@ package infrastructure
 import (
 	"net/http"
 	"strings"
-	"task-manager/Domain"
+	domain "task-manager/Domain"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// AuthMiddleware validates the JWT token from the Authorization header.
+// validate the JWT token from the Authorization header.
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -41,7 +41,7 @@ func AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-// AdminOnly is a middleware to ensure the user has an 'admin' role.
+// ensure the user has an 'admin' role.
 func AdminOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("role")

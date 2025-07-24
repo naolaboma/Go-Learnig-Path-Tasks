@@ -1,16 +1,16 @@
 package infrastructure
 
 import (
-	"task-manager/Domain"
+	domain "task-manager/Domain"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// jwtSecret should be loaded from a secure configuration, not hardcoded.
+// jwtSecret be loaded from a secure configuration.
 var jwtSecret = []byte("your-very-secret-key")
 
-// Claims defines the structure of the JWT claims.
+// define the structure of the JWT claims.
 type Claims struct {
 	UserID   string      `json:"user_id"`
 	Username string      `json:"username"`
@@ -18,7 +18,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// GenerateJWT creates a new JWT token for a given user.
+// create a new JWT token for a given user.
 func GenerateJWT(user *domain.User) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
