@@ -9,12 +9,11 @@ import (
 )
 
 // --- USER CONTROLLER ---
-
 type UserController struct {
-	userUseCase domain.UserUseCase
+	userUseCase domain.IUserUseCase
 }
 
-func NewUserController(userUseCase domain.UserUseCase) *UserController {
+func NewUserController(userUseCase domain.IUserUseCase) *UserController {
 	return &UserController{userUseCase: userUseCase}
 }
 
@@ -24,7 +23,6 @@ func (uc *UserController) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Map DTO to Domain Model
 	user := domain.User{Username: req.Username, Password: req.Password}
 
 	registeredUser, err := uc.userUseCase.Register(user)
@@ -32,7 +30,6 @@ func (uc *UserController) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Map Domain Model to Response DTO
 	res := dto.UserResponse{ID: registeredUser.ID, Username: registeredUser.Username, Role: string(registeredUser.Role)}
 	c.JSON(http.StatusCreated, res)
 }
@@ -70,10 +67,10 @@ func (uc *UserController) PromoteUser(c *gin.Context) {
 // --- TASK CONTROLLER ---
 
 type TaskController struct {
-	taskUseCase domain.TaskUseCase
+	taskUseCase domain.ITaskUseCase
 }
 
-func NewTaskController(taskUseCase domain.TaskUseCase) *TaskController {
+func NewTaskController(taskUseCase domain.ITaskUseCase) *TaskController {
 	return &TaskController{taskUseCase: taskUseCase}
 }
 
@@ -83,7 +80,6 @@ func (tc *TaskController) CreateTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Map DTO to Domain Model
 	task := domain.Task{Title: req.Title, Description: req.Description, DueDate: req.DueDate, Status: req.Status}
 
 	createdTask, err := tc.taskUseCase.CreateTask(task)
@@ -91,7 +87,6 @@ func (tc *TaskController) CreateTask(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
 		return
 	}
-	// Map Domain Model to Response DTO
 	res := dto.TaskResponse{ID: createdTask.ID, Title: createdTask.Title, Description: createdTask.Description, DueDate: createdTask.DueDate, Status: createdTask.Status, CreatedAt: createdTask.CreatedAt, UpdatedAt: createdTask.UpdatedAt}
 	c.JSON(http.StatusCreated, res)
 }
@@ -102,7 +97,6 @@ func (tc *TaskController) GetAllTasks(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})
 		return
 	}
-	// Map the slice of domain models to a slice of response DTOs
 	var taskResponses []dto.TaskResponse
 	for _, t := range tasks {
 		taskResponses = append(taskResponses, dto.TaskResponse{ID: t.ID, Title: t.Title, Description: t.Description, DueDate: t.DueDate, Status: t.Status, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt})
@@ -128,7 +122,6 @@ func (tc *TaskController) UpdateTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Map DTO to Domain Model
 	task := domain.Task{Title: req.Title, Description: req.Description, DueDate: req.DueDate, Status: req.Status}
 
 	updatedTask, err := tc.taskUseCase.UpdateTask(taskID, task)
@@ -136,7 +129,6 @@ func (tc *TaskController) UpdateTask(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	// Map Domain Model to Response DTO
 	res := dto.TaskResponse{ID: updatedTask.ID, Title: updatedTask.Title, Description: updatedTask.Description, DueDate: updatedTask.DueDate, Status: updatedTask.Status, CreatedAt: updatedTask.CreatedAt, UpdatedAt: updatedTask.UpdatedAt}
 	c.JSON(http.StatusOK, res)
 }

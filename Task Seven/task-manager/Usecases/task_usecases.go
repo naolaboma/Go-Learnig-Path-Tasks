@@ -1,12 +1,12 @@
 package usecases
 
-import "task-manager/Domain"
+import domain "task-manager/Domain"
 
 type TaskUseCase struct {
-	taskRepo domain.TaskRepository
+	taskRepo domain.ITaskRepository
 }
 
-func NewTaskUseCase(taskRepo domain.TaskRepository) *TaskUseCase {
+func NewTaskUseCase(taskRepo domain.ITaskRepository) domain.ITaskUseCase {
 	return &TaskUseCase{taskRepo: taskRepo}
 }
 

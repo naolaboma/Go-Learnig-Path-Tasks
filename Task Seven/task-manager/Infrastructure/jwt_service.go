@@ -9,6 +9,12 @@ import (
 
 var jwtSecret = []byte("your-very-secret-key")
 
+type AuthService struct{}
+
+func NewAuthService() domain.IAuthService {
+	return &AuthService{}
+}
+
 type Claims struct {
 	UserID   string      `json:"user_id"`
 	Username string      `json:"username"`
@@ -16,7 +22,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateJWT(user *domain.User) (string, error) {
+func (s *AuthService) GenerateToken(user *domain.User) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
 		UserID:   user.ID,
