@@ -22,7 +22,6 @@ type MockTaskUseCase struct {
 	mock.Mock
 }
 
-// Corrected to use the 'domain' alias
 func (m *MockTaskUseCase) CreateTask(task domain.Task) (*domain.Task, error) {
 	args := m.Called(task)
 	if args.Get(0) == nil {
@@ -31,7 +30,6 @@ func (m *MockTaskUseCase) CreateTask(task domain.Task) (*domain.Task, error) {
 	return args.Get(0).(*domain.Task), args.Error(1)
 }
 
-// Corrected to use the 'domain' alias
 func (m *MockTaskUseCase) GetAllTasks() ([]domain.Task, error) {
 	args := m.Called()
 	if args.Get(0) == nil {
@@ -39,8 +37,6 @@ func (m *MockTaskUseCase) GetAllTasks() ([]domain.Task, error) {
 	}
 	return args.Get(0).([]domain.Task), args.Error(1)
 }
-
-// Corrected to use the 'domain' alias
 func (m *MockTaskUseCase) GetTaskByID(id string) (*domain.Task, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {
@@ -49,7 +45,6 @@ func (m *MockTaskUseCase) GetTaskByID(id string) (*domain.Task, error) {
 	return args.Get(0).(*domain.Task), args.Error(1)
 }
 
-// Corrected to use the 'domain' alias
 func (m *MockTaskUseCase) UpdateTask(id string, task domain.Task) (*domain.Task, error) {
 	args := m.Called(id, task)
 	if args.Get(0) == nil {
@@ -81,8 +76,7 @@ func (suite *TaskControllerTestSuite) SetupTest() {
 }
 
 func (suite *TaskControllerTestSuite) TestCreateTask_Success() {
-	// Arrange
-	// Corrected to use the 'domain' alias
+
 	taskToCreate := domain.Task{Title: "New Task", Status: "new"}
 	suite.mockTaskUseCase.On("CreateTask", mock.Anything).Return(&taskToCreate, nil)
 
@@ -91,42 +85,31 @@ func (suite *TaskControllerTestSuite) TestCreateTask_Success() {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	// Act
 	suite.router.ServeHTTP(w, req)
 
-	// Assert
 	assert.Equal(suite.T(), http.StatusCreated, w.Code)
 	suite.mockTaskUseCase.AssertCalled(suite.T(), "CreateTask", mock.Anything)
 }
 
 func (suite *TaskControllerTestSuite) TestCreateTask_BindingError() {
-	// Arrange
 	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewBuffer([]byte(`{"title":}`)))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-
-	// Act
 	suite.router.ServeHTTP(w, req)
 
-	// Assert
 	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
 }
 
 func (suite *TaskControllerTestSuite) TestGetTaskByID_Success() {
-	// Arrange
-	// Corrected to use the 'domain' alias
 	expectedTask := &domain.Task{ID: "123", Title: "Found Task", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	suite.mockTaskUseCase.On("GetTaskByID", "123").Return(expectedTask, nil)
 
 	req, _ := http.NewRequest(http.MethodGet, "/tasks/123", nil)
 	w := httptest.NewRecorder()
 
-	// Act
 	suite.router.ServeHTTP(w, req)
 
-	// Assert
 	assert.Equal(suite.T(), http.StatusOK, w.Code)
-	// Corrected to use the 'domain' alias
 	var returnedTask domain.Task
 	json.Unmarshal(w.Body.Bytes(), &returnedTask)
 	assert.Equal(suite.T(), "123", returnedTask.ID)
@@ -134,17 +117,13 @@ func (suite *TaskControllerTestSuite) TestGetTaskByID_Success() {
 }
 
 func (suite *TaskControllerTestSuite) TestGetTaskByID_NotFound() {
-	// Arrange
-	// Corrected to use the 'domain' alias
 	suite.mockTaskUseCase.On("GetTaskByID", "404").Return((*domain.Task)(nil), errors.New("task not found"))
 
 	req, _ := http.NewRequest(http.MethodGet, "/tasks/404", nil)
 	w := httptest.NewRecorder()
 
-	// Act
 	suite.router.ServeHTTP(w, req)
 
-	// Assert
 	assert.Equal(suite.T(), http.StatusNotFound, w.Code)
 	suite.mockTaskUseCase.AssertExpectations(suite.T())
 }
@@ -194,12 +173,8 @@ func (suite *UserControllerTestSuite) SetupTest() {
 }
 
 func (suite *UserControllerTestSuite) TestRegister_Success() {
-	// Arrange
 	reqBody := dto.RegisterUserRequest{Username: "newuser", Password: "password"}
 	resUser := &domain.User{ID: "1", Username: "newuser", Role: domain.RoleUser}
-
-	// We use mock.AnythingOfType because the user object passed to the use case
-	// inside the controller is not the same as reqBody.
 	suite.mockUserUseCase.On("Register", mock.AnythingOfType("domain.User")).Return(resUser, nil)
 
 	body, _ := json.Marshal(reqBody)
@@ -207,10 +182,8 @@ func (suite *UserControllerTestSuite) TestRegister_Success() {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	// Act
 	suite.router.ServeHTTP(w, req)
 
-	// Assert
 	assert.Equal(suite.T(), http.StatusCreated, w.Code)
 	var res dto.UserResponse
 	json.Unmarshal(w.Body.Bytes(), &res)
@@ -219,7 +192,6 @@ func (suite *UserControllerTestSuite) TestRegister_Success() {
 }
 
 func (suite *UserControllerTestSuite) TestLogin_Success() {
-	// Arrange
 	reqBody := dto.LoginRequest{Username: "user", Password: "password"}
 	suite.mockUserUseCase.On("Login", "user", "password").Return("mock_token", nil)
 
@@ -228,10 +200,8 @@ func (suite *UserControllerTestSuite) TestLogin_Success() {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	// Act
 	suite.router.ServeHTTP(w, req)
 
-	// Assert
 	assert.Equal(suite.T(), http.StatusOK, w.Code)
 	var res dto.LoginResponse
 	json.Unmarshal(w.Body.Bytes(), &res)
@@ -240,7 +210,6 @@ func (suite *UserControllerTestSuite) TestLogin_Success() {
 }
 
 func (suite *UserControllerTestSuite) TestLogin_Failure() {
-	// Arrange
 	reqBody := dto.LoginRequest{Username: "user", Password: "wrongpassword"}
 	suite.mockUserUseCase.On("Login", "user", "wrongpassword").Return("", errors.New("invalid credentials"))
 
@@ -249,15 +218,11 @@ func (suite *UserControllerTestSuite) TestLogin_Failure() {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	// Act
 	suite.router.ServeHTTP(w, req)
 
-	// Assert
 	assert.Equal(suite.T(), http.StatusUnauthorized, w.Code)
 	suite.mockUserUseCase.AssertExpectations(suite.T())
 }
-
-// Add this function at the end of the file
 func TestUserControllerTestSuite(t *testing.T) {
 	suite.Run(t, new(UserControllerTestSuite))
 }

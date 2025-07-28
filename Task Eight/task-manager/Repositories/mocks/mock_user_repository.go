@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// mock implementation of the UserRepository interface
 type MockUserRepository struct {
 	mock.Mock
 }
