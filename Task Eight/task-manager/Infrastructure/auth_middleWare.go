@@ -34,7 +34,6 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Set user context for subsequent handlers
 		c.Set("userID", claims.UserID)
 		c.Set("role", claims.Role)
 		c.Next()

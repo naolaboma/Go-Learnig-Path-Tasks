@@ -10,12 +10,13 @@ import (
 
 // --- USER CONTROLLER ---
 type UserController struct {
-	userUseCase domain.UserUseCase
+	userUseCase domain.IUserUseCase
 }
 
-func NewUserController(userUseCase domain.UserUseCase) *UserController {
+func NewUserController(userUseCase domain.IUserUseCase) *UserController {
 	return &UserController{userUseCase: userUseCase}
 }
+
 func (uc *UserController) Register(c *gin.Context) {
 	var req dto.RegisterUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -32,6 +33,7 @@ func (uc *UserController) Register(c *gin.Context) {
 	res := dto.UserResponse{ID: registeredUser.ID, Username: registeredUser.Username, Role: string(registeredUser.Role)}
 	c.JSON(http.StatusCreated, res)
 }
+
 func (uc *UserController) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -46,6 +48,7 @@ func (uc *UserController) Login(c *gin.Context) {
 	res := dto.LoginResponse{Token: token}
 	c.JSON(http.StatusOK, res)
 }
+
 func (uc *UserController) PromoteUser(c *gin.Context) {
 	var req dto.PromoteUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -64,10 +67,10 @@ func (uc *UserController) PromoteUser(c *gin.Context) {
 // --- TASK CONTROLLER ---
 
 type TaskController struct {
-	taskUseCase domain.TaskUseCase
+	taskUseCase domain.ITaskUseCase
 }
 
-func NewTaskController(taskUseCase domain.TaskUseCase) *TaskController {
+func NewTaskController(taskUseCase domain.ITaskUseCase) *TaskController {
 	return &TaskController{taskUseCase: taskUseCase}
 }
 
@@ -87,6 +90,7 @@ func (tc *TaskController) CreateTask(c *gin.Context) {
 	res := dto.TaskResponse{ID: createdTask.ID, Title: createdTask.Title, Description: createdTask.Description, DueDate: createdTask.DueDate, Status: createdTask.Status, CreatedAt: createdTask.CreatedAt, UpdatedAt: createdTask.UpdatedAt}
 	c.JSON(http.StatusCreated, res)
 }
+
 func (tc *TaskController) GetAllTasks(c *gin.Context) {
 	tasks, err := tc.taskUseCase.GetAllTasks()
 	if err != nil {
@@ -99,6 +103,7 @@ func (tc *TaskController) GetAllTasks(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, taskResponses)
 }
+
 func (tc *TaskController) GetTaskByID(c *gin.Context) {
 	taskID := c.Param("id")
 	task, err := tc.taskUseCase.GetTaskByID(taskID)
@@ -109,6 +114,7 @@ func (tc *TaskController) GetTaskByID(c *gin.Context) {
 	res := dto.TaskResponse{ID: task.ID, Title: task.Title, Description: task.Description, DueDate: task.DueDate, Status: task.Status, CreatedAt: task.CreatedAt, UpdatedAt: task.UpdatedAt}
 	c.JSON(http.StatusOK, res)
 }
+
 func (tc *TaskController) UpdateTask(c *gin.Context) {
 	taskID := c.Param("id")
 	var req dto.UpdateTaskRequest
@@ -117,6 +123,7 @@ func (tc *TaskController) UpdateTask(c *gin.Context) {
 		return
 	}
 	task := domain.Task{Title: req.Title, Description: req.Description, DueDate: req.DueDate, Status: req.Status}
+
 	updatedTask, err := tc.taskUseCase.UpdateTask(taskID, task)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -125,6 +132,7 @@ func (tc *TaskController) UpdateTask(c *gin.Context) {
 	res := dto.TaskResponse{ID: updatedTask.ID, Title: updatedTask.Title, Description: updatedTask.Description, DueDate: updatedTask.DueDate, Status: updatedTask.Status, CreatedAt: updatedTask.CreatedAt, UpdatedAt: updatedTask.UpdatedAt}
 	c.JSON(http.StatusOK, res)
 }
+
 func (tc *TaskController) DeleteTask(c *gin.Context) {
 	taskID := c.Param("id")
 	err := tc.taskUseCase.DeleteTask(taskID)

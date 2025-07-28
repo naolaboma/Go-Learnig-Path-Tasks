@@ -1,11 +1,11 @@
 package mocks
 
 import (
-	domain "task-manager/Domain"
-
 	"github.com/stretchr/testify/mock"
+	"task-manager/Domain"
 )
 
+// MockTaskRepository is a mock for ITaskRepository
 type MockTaskRepository struct {
 	mock.Mock
 }

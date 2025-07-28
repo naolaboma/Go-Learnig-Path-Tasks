@@ -6,8 +6,9 @@ import (
 	"os"
 	"task-manager/Delivery/controllers"
 	"task-manager/Delivery/routers"
-	"task-manager/Repositories"
-	"task-manager/Usecases"
+	infrastructure "task-manager/Infrastructure"
+	repositories "task-manager/Repositories"
+	usecases "task-manager/Usecases"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -29,7 +30,6 @@ func main() {
 		}
 	}()
 
-	// Ping the primary
 	if err := client.Ping(context.Background(), nil); err != nil {
 		log.Fatalf("Failed to ping MongoDB: %v", err)
 	}
@@ -37,12 +37,19 @@ func main() {
 
 	database := client.Database("task_manager_db")
 
+	// --- Instantiate Infrastructure Services ---
+	passwordService := infrastructure.NewPasswordService()
+	authService := infrastructure.NewAuthService()
+
+	// --- Instantiate Repositories with their dependencies ---
 	taskRepo := repositories.NewTaskRepository(database.Collection("tasks"))
-	userRepo := repositories.NewUserRepository(database.Collection("users"))
+	userRepo := repositories.NewUserRepository(database.Collection("users"), passwordService)
 
+	// --- Instantiate UseCases with their dependencies ---
 	taskUseCase := usecases.NewTaskUseCase(taskRepo)
-	userUseCase := usecases.NewUserUseCase(userRepo)
+	userUseCase := usecases.NewUserUseCase(userRepo, passwordService, authService)
 
+	// --- Instantiate Controllers with their dependencies ---
 	taskController := controllers.NewTaskController(taskUseCase)
 	userController := controllers.NewUserController(userUseCase)
 

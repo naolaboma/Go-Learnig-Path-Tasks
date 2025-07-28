@@ -3,15 +3,20 @@ package usecases
 import (
 	"errors"
 	domain "task-manager/Domain"
-	infrastructure "task-manager/Infrastructure"
 )
 
 type UserUseCase struct {
-	userRepo domain.UserRepository
+	userRepo        domain.IUserRepository
+	passwordService domain.IPasswordService
+	authService     domain.IAuthService
 }
 
-func NewUserUseCase(userRepo domain.UserRepository) *UserUseCase {
-	return &UserUseCase{userRepo: userRepo}
+func NewUserUseCase(userRepo domain.IUserRepository, passwordService domain.IPasswordService, authService domain.IAuthService) domain.IUserUseCase {
+	return &UserUseCase{
+		userRepo:        userRepo,
+		passwordService: passwordService,
+		authService:     authService,
+	}
 }
 
 func (uc *UserUseCase) Register(user domain.User) (*domain.User, error) {
@@ -27,11 +32,11 @@ func (uc *UserUseCase) Login(username, password string) (string, error) {
 		return "", errors.New("invalid credentials")
 	}
 
-	if !infrastructure.CheckPasswordHash(password, user.Password) {
+	if !uc.passwordService.Check(password, user.Password) {
 		return "", errors.New("invalid credentials")
 	}
 
-	token, err := infrastructure.GenerateJWT(user)
+	token, err := uc.authService.GenerateToken(user)
 	if err != nil {
 		return "", errors.New("could not generate token")
 	}
