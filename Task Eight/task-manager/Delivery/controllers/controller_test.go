@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"task-manager/Delivery/dto"
 	domain "task-manager/Domain"
 	"testing"
 	"time"
@@ -16,7 +17,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// --- Mock UseCases ---
+// --- Mock MockTaskUseCases ---
 type MockTaskUseCase struct {
 	mock.Mock
 }
@@ -150,4 +151,113 @@ func (suite *TaskControllerTestSuite) TestGetTaskByID_NotFound() {
 
 func TestTaskControllerTestSuite(t *testing.T) {
 	suite.Run(t, new(TaskControllerTestSuite))
+}
+
+// --- Mock UserUseCase ---
+type MockUserUseCase struct {
+	mock.Mock
+}
+
+func (m *MockUserUseCase) Register(user domain.User) (*domain.User, error) {
+	args := m.Called(user)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.User), args.Error(1)
+}
+
+func (m *MockUserUseCase) Login(username, password string) (string, error) {
+	args := m.Called(username, password)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockUserUseCase) PromoteUser(username string, promoterID string) error {
+	args := m.Called(username, promoterID)
+	return args.Error(0)
+}
+
+// --- UserController Test Suite ---
+type UserControllerTestSuite struct {
+	suite.Suite
+	router          *gin.Engine
+	mockUserUseCase *MockUserUseCase
+	userController  *UserController
+}
+
+func (suite *UserControllerTestSuite) SetupTest() {
+	gin.SetMode(gin.TestMode)
+	suite.router = gin.Default()
+	suite.mockUserUseCase = new(MockUserUseCase)
+	suite.userController = NewUserController(suite.mockUserUseCase)
+	suite.router.POST("/register", suite.userController.Register)
+	suite.router.POST("/login", suite.userController.Login)
+}
+
+func (suite *UserControllerTestSuite) TestRegister_Success() {
+	// Arrange
+	reqBody := dto.RegisterUserRequest{Username: "newuser", Password: "password"}
+	resUser := &domain.User{ID: "1", Username: "newuser", Role: domain.RoleUser}
+
+	// We use mock.AnythingOfType because the user object passed to the use case
+	// inside the controller is not the same as reqBody.
+	suite.mockUserUseCase.On("Register", mock.AnythingOfType("domain.User")).Return(resUser, nil)
+
+	body, _ := json.Marshal(reqBody)
+	req, _ := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	// Act
+	suite.router.ServeHTTP(w, req)
+
+	// Assert
+	assert.Equal(suite.T(), http.StatusCreated, w.Code)
+	var res dto.UserResponse
+	json.Unmarshal(w.Body.Bytes(), &res)
+	assert.Equal(suite.T(), "newuser", res.Username)
+	suite.mockUserUseCase.AssertExpectations(suite.T())
+}
+
+func (suite *UserControllerTestSuite) TestLogin_Success() {
+	// Arrange
+	reqBody := dto.LoginRequest{Username: "user", Password: "password"}
+	suite.mockUserUseCase.On("Login", "user", "password").Return("mock_token", nil)
+
+	body, _ := json.Marshal(reqBody)
+	req, _ := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	// Act
+	suite.router.ServeHTTP(w, req)
+
+	// Assert
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+	var res dto.LoginResponse
+	json.Unmarshal(w.Body.Bytes(), &res)
+	assert.Equal(suite.T(), "mock_token", res.Token)
+	suite.mockUserUseCase.AssertExpectations(suite.T())
+}
+
+func (suite *UserControllerTestSuite) TestLogin_Failure() {
+	// Arrange
+	reqBody := dto.LoginRequest{Username: "user", Password: "wrongpassword"}
+	suite.mockUserUseCase.On("Login", "user", "wrongpassword").Return("", errors.New("invalid credentials"))
+
+	body, _ := json.Marshal(reqBody)
+	req, _ := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	// Act
+	suite.router.ServeHTTP(w, req)
+
+	// Assert
+	assert.Equal(suite.T(), http.StatusUnauthorized, w.Code)
+	suite.mockUserUseCase.AssertExpectations(suite.T())
+}
+
+// Add this function at the end of the file
+func TestUserControllerTestSuite(t *testing.T) {
+	suite.Run(t, new(UserControllerTestSuite))
 }
