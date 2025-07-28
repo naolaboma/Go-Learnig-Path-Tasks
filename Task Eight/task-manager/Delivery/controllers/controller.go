@@ -9,7 +9,6 @@ import (
 )
 
 // --- USER CONTROLLER ---
-
 type UserController struct {
 	userUseCase domain.UserUseCase
 }
@@ -17,14 +16,12 @@ type UserController struct {
 func NewUserController(userUseCase domain.UserUseCase) *UserController {
 	return &UserController{userUseCase: userUseCase}
 }
-
 func (uc *UserController) Register(c *gin.Context) {
 	var req dto.RegisterUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Map DTO to Domain Model
 	user := domain.User{Username: req.Username, Password: req.Password}
 
 	registeredUser, err := uc.userUseCase.Register(user)
@@ -32,11 +29,9 @@ func (uc *UserController) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Map Domain Model to Response DTO
 	res := dto.UserResponse{ID: registeredUser.ID, Username: registeredUser.Username, Role: string(registeredUser.Role)}
 	c.JSON(http.StatusCreated, res)
 }
-
 func (uc *UserController) Login(c *gin.Context) {
 	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -51,7 +46,6 @@ func (uc *UserController) Login(c *gin.Context) {
 	res := dto.LoginResponse{Token: token}
 	c.JSON(http.StatusOK, res)
 }
-
 func (uc *UserController) PromoteUser(c *gin.Context) {
 	var req dto.PromoteUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -83,7 +77,6 @@ func (tc *TaskController) CreateTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Map DTO to Domain Model
 	task := domain.Task{Title: req.Title, Description: req.Description, DueDate: req.DueDate, Status: req.Status}
 
 	createdTask, err := tc.taskUseCase.CreateTask(task)
@@ -91,25 +84,21 @@ func (tc *TaskController) CreateTask(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
 		return
 	}
-	// Map Domain Model to Response DTO
 	res := dto.TaskResponse{ID: createdTask.ID, Title: createdTask.Title, Description: createdTask.Description, DueDate: createdTask.DueDate, Status: createdTask.Status, CreatedAt: createdTask.CreatedAt, UpdatedAt: createdTask.UpdatedAt}
 	c.JSON(http.StatusCreated, res)
 }
-
 func (tc *TaskController) GetAllTasks(c *gin.Context) {
 	tasks, err := tc.taskUseCase.GetAllTasks()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})
 		return
 	}
-	// Map the slice of domain models to a slice of response DTOs
 	var taskResponses []dto.TaskResponse
 	for _, t := range tasks {
 		taskResponses = append(taskResponses, dto.TaskResponse{ID: t.ID, Title: t.Title, Description: t.Description, DueDate: t.DueDate, Status: t.Status, CreatedAt: t.CreatedAt, UpdatedAt: t.UpdatedAt})
 	}
 	c.JSON(http.StatusOK, taskResponses)
 }
-
 func (tc *TaskController) GetTaskByID(c *gin.Context) {
 	taskID := c.Param("id")
 	task, err := tc.taskUseCase.GetTaskByID(taskID)
@@ -120,7 +109,6 @@ func (tc *TaskController) GetTaskByID(c *gin.Context) {
 	res := dto.TaskResponse{ID: task.ID, Title: task.Title, Description: task.Description, DueDate: task.DueDate, Status: task.Status, CreatedAt: task.CreatedAt, UpdatedAt: task.UpdatedAt}
 	c.JSON(http.StatusOK, res)
 }
-
 func (tc *TaskController) UpdateTask(c *gin.Context) {
 	taskID := c.Param("id")
 	var req dto.UpdateTaskRequest
@@ -128,19 +116,15 @@ func (tc *TaskController) UpdateTask(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Map DTO to Domain Model
 	task := domain.Task{Title: req.Title, Description: req.Description, DueDate: req.DueDate, Status: req.Status}
-
 	updatedTask, err := tc.taskUseCase.UpdateTask(taskID, task)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	// Map Domain Model to Response DTO
 	res := dto.TaskResponse{ID: updatedTask.ID, Title: updatedTask.Title, Description: updatedTask.Description, DueDate: updatedTask.DueDate, Status: updatedTask.Status, CreatedAt: updatedTask.CreatedAt, UpdatedAt: updatedTask.UpdatedAt}
 	c.JSON(http.StatusOK, res)
 }
-
 func (tc *TaskController) DeleteTask(c *gin.Context) {
 	taskID := c.Param("id")
 	err := tc.taskUseCase.DeleteTask(taskID)

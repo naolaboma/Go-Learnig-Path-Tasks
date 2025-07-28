@@ -40,7 +40,6 @@ func (uc *UserUseCase) Login(username, password string) (string, error) {
 }
 
 func (uc *UserUseCase) PromoteUser(username string, promoterID string) error {
-	// Optional: Check if the promoter has the right to promote
 	promoter, err := uc.userRepo.GetByID(promoterID)
 	if err != nil {
 		return errors.New("promoter not found")
