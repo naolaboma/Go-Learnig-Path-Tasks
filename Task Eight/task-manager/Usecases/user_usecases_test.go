@@ -1,63 +1,251 @@
 package usecases
 
 import (
+	"errors"
 	domain "task-manager/Domain"
 	"task-manager/Repositories/mocks"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
 type UserUseCaseTestSuite struct {
 	suite.Suite
-	mockUserRepo        *mocks.MockUserRepository
-	mockPasswordService *mocks.MockPasswordService
-	mockAuthService     *mocks.MockAuthService
-	userUseCase         domain.IUserUseCase
+	mockUserRepo    *mocks.MockUserRepository
+	mockPasswordSvc *mocks.MockPasswordService
+	mockAuthSvc     *mocks.MockAuthService
+	useCase         domain.IUserUseCase
+	dummyUser       domain.User
 }
 
 func (suite *UserUseCaseTestSuite) SetupTest() {
 	suite.mockUserRepo = new(mocks.MockUserRepository)
-	// You would also initialize your new service mocks here
-	// For now, we'll assume they exist for the login test
-	suite.mockPasswordService = new(mocks.MockPasswordService)
-	suite.mockAuthService = new(mocks.MockAuthService)
-	suite.userUseCase = NewUserUseCase(suite.mockUserRepo, suite.mockPasswordService, suite.mockAuthService)
+	suite.mockPasswordSvc = new(mocks.MockPasswordService)
+	suite.mockAuthSvc = new(mocks.MockAuthService)
+	suite.useCase = NewUserUseCase(suite.mockUserRepo, suite.mockPasswordSvc, suite.mockAuthSvc)
+	suite.dummyUser = domain.User{
+		ID:       "1",
+		Username: "testuser",
+		Password: "hashedpassword",
+		Role:     domain.RoleUser,
+	}
 }
 
 func (suite *UserUseCaseTestSuite) TestRegister_Success() {
-	user := domain.User{Username: "test", Password: "password"}
-	suite.mockUserRepo.On("Create", user).Return(&user, nil)
-	_, err := suite.userUseCase.Register(user)
+	suite.mockUserRepo.On("Exists", "testuser").Return(false, nil)
+	suite.mockPasswordSvc.On("Hash", "password123").Return("hashedpassword", nil)
+	suite.mockUserRepo.On("Create", mock.AnythingOfType("domain.User")).Return(&suite.dummyUser, nil)
+
+	user := domain.User{
+		Username: "testuser",
+		Password: "password123",
+	}
+
+	result, err := suite.useCase.Register(user)
 	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), "testuser", result.Username)
 	suite.mockUserRepo.AssertExpectations(suite.T())
+	suite.mockPasswordSvc.AssertExpectations(suite.T())
+}
+
+func (suite *UserUseCaseTestSuite) TestRegister_ValidationError_ShortUsername() {
+	user := domain.User{
+		Username: "ab",
+		Password: "password123",
+	}
+
+	_, err := suite.useCase.Register(user)
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), domain.ErrInvalidInput, err)
+}
+
+func (suite *UserUseCaseTestSuite) TestRegister_ValidationError_ShortPassword() {
+	user := domain.User{
+		Username: "testuser",
+		Password: "123",
+	}
+
+	_, err := suite.useCase.Register(user)
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), domain.ErrInvalidInput, err)
+}
+
+func (suite *UserUseCaseTestSuite) TestRegister_UserAlreadyExists() {
+	suite.mockUserRepo.On("Exists", "testuser").Return(true, nil)
+
+	user := domain.User{
+		Username: "testuser",
+		Password: "password123",
+	}
+
+	_, err := suite.useCase.Register(user)
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), domain.ErrDuplicateEntry, err)
+	suite.mockUserRepo.AssertExpectations(suite.T())
+}
+
+func (suite *UserUseCaseTestSuite) TestRegister_PasswordHashError() {
+	suite.mockUserRepo.On("Exists", "testuser").Return(false, nil)
+	suite.mockPasswordSvc.On("Hash", "password123").Return("", errors.New("hash error"))
+
+	user := domain.User{
+		Username: "testuser",
+		Password: "password123",
+	}
+
+	_, err := suite.useCase.Register(user)
+	assert.Error(suite.T(), err)
+	suite.mockUserRepo.AssertExpectations(suite.T())
+	suite.mockPasswordSvc.AssertExpectations(suite.T())
 }
 
 func (suite *UserUseCaseTestSuite) TestLogin_Success() {
-	username := "testuser"
-	password := "password"
-	hashedPassword := "hashed"
-	user := &domain.User{Username: username, Password: hashedPassword}
+	suite.mockUserRepo.On("GetByUsername", "testuser").Return(&suite.dummyUser, nil)
+	suite.mockPasswordSvc.On("Check", "password123", mock.AnythingOfType("string")).Return(true)
+	suite.mockAuthSvc.On("GenerateToken", &suite.dummyUser).Return("jwt-token", nil)
 
-	suite.mockUserRepo.On("GetByUsername", username).Return(user, nil)
-	suite.mockPasswordService.On("Check", password, hashedPassword).Return(true)
-	suite.mockAuthService.On("GenerateToken", user).Return("test_token", nil)
-
-	token, err := suite.userUseCase.Login(username, password)
+	token, err := suite.useCase.Login("testuser", "password123")
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), "test_token", token)
+	assert.Equal(suite.T(), "jwt-token", token)
 	suite.mockUserRepo.AssertExpectations(suite.T())
-	suite.mockPasswordService.AssertExpectations(suite.T())
-	suite.mockAuthService.AssertExpectations(suite.T())
+	suite.mockPasswordSvc.AssertExpectations(suite.T())
+	suite.mockAuthSvc.AssertExpectations(suite.T())
+}
+
+func (suite *UserUseCaseTestSuite) TestLogin_EmptyCredentials() {
+	_, err := suite.useCase.Login("", "password123")
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), domain.ErrInvalidInput, err)
+
+	_, err = suite.useCase.Login("testuser", "")
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), domain.ErrInvalidInput, err)
+}
+
+func (suite *UserUseCaseTestSuite) TestLogin_UserNotFound() {
+	suite.mockUserRepo.On("GetByUsername", "nonexistent").Return(nil, errors.New("not found"))
+
+	_, err := suite.useCase.Login("nonexistent", "password123")
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), domain.ErrInvalidCredentials, err)
+	suite.mockUserRepo.AssertExpectations(suite.T())
+}
+
+func (suite *UserUseCaseTestSuite) TestLogin_InvalidPassword() {
+	suite.mockUserRepo.On("GetByUsername", "testuser").Return(&suite.dummyUser, nil)
+	suite.mockPasswordSvc.On("Check", "wrongpassword", mock.AnythingOfType("string")).Return(false)
+
+	_, err := suite.useCase.Login("testuser", "wrongpassword")
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), domain.ErrInvalidCredentials, err)
+	suite.mockUserRepo.AssertExpectations(suite.T())
+	suite.mockPasswordSvc.AssertExpectations(suite.T())
+}
+
+func (suite *UserUseCaseTestSuite) TestLogin_TokenGenerationError() {
+	suite.mockUserRepo.On("GetByUsername", "testuser").Return(&suite.dummyUser, nil)
+	suite.mockPasswordSvc.On("Check", "password123", mock.AnythingOfType("string")).Return(true)
+	suite.mockAuthSvc.On("GenerateToken", &suite.dummyUser).Return("", errors.New("token error"))
+
+	_, err := suite.useCase.Login("testuser", "password123")
+	assert.Error(suite.T(), err)
+	suite.mockUserRepo.AssertExpectations(suite.T())
+	suite.mockPasswordSvc.AssertExpectations(suite.T())
+	suite.mockAuthSvc.AssertExpectations(suite.T())
 }
 
 func (suite *UserUseCaseTestSuite) TestPromoteUser_Success() {
-	adminUser := &domain.User{ID: "admin1", Role: domain.RoleAdmin}
-	suite.mockUserRepo.On("GetByID", "admin1").Return(adminUser, nil)
+	promoter := domain.User{
+		ID:       "2",
+		Username: "admin",
+		Role:     domain.RoleAdmin,
+	}
+	userToPromote := domain.User{
+		ID:       "1",
+		Username: "testuser",
+		Role:     domain.RoleUser,
+	}
+
+	suite.mockUserRepo.On("GetByID", "2").Return(&promoter, nil)
+	suite.mockUserRepo.On("GetByUsername", "testuser").Return(&userToPromote, nil)
 	suite.mockUserRepo.On("Promote", "testuser").Return(nil)
-	err := suite.userUseCase.PromoteUser("testuser", "admin1")
+
+	err := suite.useCase.PromoteUser("testuser", "2")
 	assert.NoError(suite.T(), err)
+	suite.mockUserRepo.AssertExpectations(suite.T())
+}
+
+func (suite *UserUseCaseTestSuite) TestPromoteUser_EmptyInputs() {
+	err := suite.useCase.PromoteUser("", "2")
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), domain.ErrInvalidInput, err)
+
+	err = suite.useCase.PromoteUser("testuser", "")
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), domain.ErrInvalidInput, err)
+}
+
+func (suite *UserUseCaseTestSuite) TestPromoteUser_PromoterNotFound() {
+	suite.mockUserRepo.On("GetByID", "2").Return(nil, errors.New("not found"))
+
+	err := suite.useCase.PromoteUser("testuser", "2")
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), domain.ErrNotFound, err)
+	suite.mockUserRepo.AssertExpectations(suite.T())
+}
+
+func (suite *UserUseCaseTestSuite) TestPromoteUser_PromoterNotAdmin() {
+	promoter := domain.User{
+		ID:       "2",
+		Username: "user",
+		Role:     domain.RoleUser,
+	}
+
+	suite.mockUserRepo.On("GetByID", "2").Return(&promoter, nil)
+
+	err := suite.useCase.PromoteUser("testuser", "2")
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), domain.ErrForbidden, err)
+	suite.mockUserRepo.AssertExpectations(suite.T())
+}
+
+func (suite *UserUseCaseTestSuite) TestPromoteUser_UserToPromoteNotFound() {
+	promoter := domain.User{
+		ID:       "2",
+		Username: "admin",
+		Role:     domain.RoleAdmin,
+	}
+
+	suite.mockUserRepo.On("GetByID", "2").Return(&promoter, nil)
+	suite.mockUserRepo.On("GetByUsername", "nonexistent").Return(nil, errors.New("not found"))
+
+	err := suite.useCase.PromoteUser("nonexistent", "2")
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), domain.ErrNotFound, err)
+	suite.mockUserRepo.AssertExpectations(suite.T())
+}
+
+func (suite *UserUseCaseTestSuite) TestPromoteUser_UserAlreadyAdmin() {
+	promoter := domain.User{
+		ID:       "2",
+		Username: "admin",
+		Role:     domain.RoleAdmin,
+	}
+	userToPromote := domain.User{
+		ID:       "1",
+		Username: "testuser",
+		Role:     domain.RoleAdmin,
+	}
+
+	suite.mockUserRepo.On("GetByID", "2").Return(&promoter, nil)
+	suite.mockUserRepo.On("GetByUsername", "testuser").Return(&userToPromote, nil)
+
+	err := suite.useCase.PromoteUser("testuser", "2")
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), domain.ErrInvalidInput, err)
 	suite.mockUserRepo.AssertExpectations(suite.T())
 }
 

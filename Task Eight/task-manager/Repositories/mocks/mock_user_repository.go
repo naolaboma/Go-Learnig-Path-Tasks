@@ -38,3 +38,8 @@ func (m *MockUserRepository) Promote(username string) error {
 	args := m.Called(username)
 	return args.Error(0)
 }
+
+func (m *MockUserRepository) Exists(username string) (bool, error) {
+	args := m.Called(username)
+	return args.Bool(0), args.Error(1)
+}

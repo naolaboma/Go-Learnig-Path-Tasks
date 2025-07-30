@@ -6,11 +6,10 @@ import (
 	domain "task-manager/Domain"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 )
 
-// validate the JWT token from the Authorization header.
-func AuthMiddleware() gin.HandlerFunc {
+// AuthMiddleware validates the JWT token from the Authorization header.
+func AuthMiddleware(authService domain.IAuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -24,17 +23,14 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		claims := &Claims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return jwtSecret, nil
-		})
-
-		if err != nil || !token.Valid {
+		claims, err := authService.ValidateToken(tokenString)
+		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
 		}
 
 		c.Set("userID", claims.UserID)
+		c.Set("username", claims.Username)
 		c.Set("role", claims.Role)
 		c.Next()
 	}
