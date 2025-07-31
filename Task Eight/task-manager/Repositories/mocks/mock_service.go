@@ -27,3 +27,11 @@ func (m *MockAuthService) GenerateToken(user *domain.User) (string, error) {
 	args := m.Called(user)
 	return args.String(0), args.Error(1)
 }
+
+func (m *MockAuthService) ValidateToken(tokenString string) (*domain.Claims, error) {
+	args := m.Called(tokenString)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.Claims), args.Error(1)
+}

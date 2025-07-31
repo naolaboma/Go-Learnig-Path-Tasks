@@ -2,19 +2,20 @@ package routers
 
 import (
 	"task-manager/Delivery/controllers"
-	"task-manager/Infrastructure"
+	domain "task-manager/Domain"
+	infrastructure "task-manager/Infrastructure"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(taskController *controllers.TaskController, userController *controllers.UserController) *gin.Engine {
+func SetupRouter(taskController *controllers.TaskController, userController *controllers.UserController, authService domain.IAuthService) *gin.Engine {
 	r := gin.Default()
 
 	r.POST("/register", userController.Register)
 	r.POST("/login", userController.Login)
 
 	taskRoutes := r.Group("/tasks")
-	taskRoutes.Use(infrastructure.AuthMiddleware())
+	taskRoutes.Use(infrastructure.AuthMiddleware(authService))
 	{
 		taskRoutes.GET("/", taskController.GetAllTasks)
 		taskRoutes.GET("/:id", taskController.GetTaskByID)
@@ -31,7 +32,7 @@ func SetupRouter(taskController *controllers.TaskController, userController *con
 
 	// Admin-only user management routes
 	adminRoutes := r.Group("/admin")
-	adminRoutes.Use(infrastructure.AuthMiddleware(), infrastructure.AdminOnly())
+	adminRoutes.Use(infrastructure.AuthMiddleware(authService), infrastructure.AdminOnly())
 	{
 		adminRoutes.POST("/promote", userController.PromoteUser)
 	}

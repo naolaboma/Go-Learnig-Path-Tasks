@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"errors"
 	domain "task-manager/Domain"
 	"time"
 
@@ -30,9 +31,35 @@ func (s *AuthService) GenerateToken(user *domain.User) (string, error) {
 		Role:     user.Role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtSecret)
+}
+
+func (s *AuthService) ValidateToken(tokenString string) (*domain.Claims, error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return jwtSecret, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	return &domain.Claims{
+		UserID:   claims.UserID,
+		Username: claims.Username,
+		Role:     claims.Role,
+	}, nil
 }

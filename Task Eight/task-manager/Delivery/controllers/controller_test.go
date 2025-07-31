@@ -3,12 +3,13 @@ package controllers
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"task-manager/Delivery/dto"
-	"task-manager/Domain"
+	domain "task-manager/Domain"
+	"task-manager/Repositories/mocks"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -16,138 +17,283 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// --- Mock UseCases ---
-type MockTaskUseCase struct{ mock.Mock }
-
-func (m *MockTaskUseCase) CreateTask(task domain.Task) (*domain.Task, error) {
-	args := m.Called(task)
-	return args.Get(0).(*domain.Task), args.Error(1)
-}
-func (m *MockTaskUseCase) GetAllTasks() ([]domain.Task, error) {
-	args := m.Called()
-	return args.Get(0).([]domain.Task), args.Error(1)
-}
-func (m *MockTaskUseCase) GetTaskByID(id string) (*domain.Task, error) {
-	args := m.Called(id)
-	return args.Get(0).(*domain.Task), args.Error(1)
-}
-func (m *MockTaskUseCase) UpdateTask(id string, task domain.Task) (*domain.Task, error) {
-	args := m.Called(id, task)
-	return args.Get(0).(*domain.Task), args.Error(1)
-}
-func (m *MockTaskUseCase) DeleteTask(id string) error {
-	args := m.Called(id)
-	return args.Error(0)
-}
-
-type MockUserUseCase struct{ mock.Mock }
-
-func (m *MockUserUseCase) Register(user domain.User) (*domain.User, error) {
-	args := m.Called(user)
-	return args.Get(0).(*domain.User), args.Error(1)
-}
-func (m *MockUserUseCase) Login(username, password string) (string, error) {
-	args := m.Called(username, password)
-	return args.String(0), args.Error(1)
-}
-func (m *MockUserUseCase) PromoteUser(username string, promoterID string) error {
-	args := m.Called(username, promoterID)
-	return args.Error(0)
-}
-
-// --- TaskController Test Suite ---
-type TaskControllerTestSuite struct {
+type ControllerTestSuite struct {
 	suite.Suite
 	router          *gin.Engine
-	mockTaskUseCase *MockTaskUseCase
+	mockTaskUseCase *mocks.MockTaskUseCase
+	mockUserUseCase *mocks.MockUserUseCase
 	taskController  *TaskController
-}
-
-func (suite *TaskControllerTestSuite) SetupTest() {
-	gin.SetMode(gin.TestMode)
-	suite.router = gin.Default()
-	suite.mockTaskUseCase = new(MockTaskUseCase)
-	suite.taskController = NewTaskController(suite.mockTaskUseCase)
-	suite.router.POST("/tasks", suite.taskController.CreateTask)
-	suite.router.GET("/tasks/:id", suite.taskController.GetTaskByID)
-}
-
-func (suite *TaskControllerTestSuite) TestCreateTask_Success() {
-	taskToCreate := domain.Task{Title: "New Task", Status: "new"}
-	suite.mockTaskUseCase.On("CreateTask", mock.AnythingOfType("domain.Task")).Return(&taskToCreate, nil)
-
-	body, _ := json.Marshal(taskToCreate)
-	req, _ := http.NewRequest(http.MethodPost, "/tasks", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	suite.router.ServeHTTP(w, req)
-
-	assert.Equal(suite.T(), http.StatusCreated, w.Code)
-	suite.mockTaskUseCase.AssertExpectations(suite.T())
-}
-
-func (suite *TaskControllerTestSuite) TestGetTaskByID_NotFound() {
-	suite.mockTaskUseCase.On("GetTaskByID", "404").Return((*domain.Task)(nil), errors.New("task not found"))
-	req, _ := http.NewRequest(http.MethodGet, "/tasks/404", nil)
-	w := httptest.NewRecorder()
-	suite.router.ServeHTTP(w, req)
-	assert.Equal(suite.T(), http.StatusNotFound, w.Code)
-	suite.mockTaskUseCase.AssertExpectations(suite.T())
-}
-
-func TestTaskControllerTestSuite(t *testing.T) {
-	suite.Run(t, new(TaskControllerTestSuite))
-}
-
-// --- UserController Test Suite ---
-type UserControllerTestSuite struct {
-	suite.Suite
-	router          *gin.Engine
-	mockUserUseCase *MockUserUseCase
 	userController  *UserController
 }
 
-func (suite *UserControllerTestSuite) SetupTest() {
+func (suite *ControllerTestSuite) SetupTest() {
 	gin.SetMode(gin.TestMode)
-	suite.router = gin.Default()
-	suite.mockUserUseCase = new(MockUserUseCase)
+	suite.router = gin.New()
+
+	suite.mockTaskUseCase = new(mocks.MockTaskUseCase)
+	suite.mockUserUseCase = new(mocks.MockUserUseCase)
+
+	suite.taskController = NewTaskController(suite.mockTaskUseCase)
 	suite.userController = NewUserController(suite.mockUserUseCase)
+
+	// Setup routes
 	suite.router.POST("/register", suite.userController.Register)
 	suite.router.POST("/login", suite.userController.Login)
+	suite.router.GET("/tasks", suite.taskController.GetAllTasks)
+	suite.router.GET("/tasks/:id", suite.taskController.GetTaskByID)
+	suite.router.POST("/tasks", suite.taskController.CreateTask)
+	suite.router.PUT("/tasks/:id", suite.taskController.UpdateTask)
+	suite.router.DELETE("/tasks/:id", suite.taskController.DeleteTask)
 }
 
-func (suite *UserControllerTestSuite) TestRegister_Success() {
-	reqBody := dto.RegisterUserRequest{Username: "newuser", Password: "password"}
-	resUser := &domain.User{ID: "1", Username: "newuser", Role: domain.RoleUser}
-	suite.mockUserUseCase.On("Register", mock.AnythingOfType("domain.User")).Return(resUser, nil)
+func (suite *ControllerTestSuite) TestRegister_Success() {
+	user := domain.User{
+		ID:       "1",
+		Username: "testuser",
+		Role:     domain.RoleUser,
+	}
 
-	body, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(body))
+	suite.mockUserUseCase.On("Register", mock.AnythingOfType("domain.User")).Return(&user, nil)
+
+	reqBody := dto.RegisterUserRequest{
+		Username: "testuser",
+		Password: "password123",
+	}
+
+	jsonBody, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/register", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
 
+	w := httptest.NewRecorder()
 	suite.router.ServeHTTP(w, req)
 
 	assert.Equal(suite.T(), http.StatusCreated, w.Code)
+
+	var response dto.UserResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "testuser", response.Username)
+
 	suite.mockUserUseCase.AssertExpectations(suite.T())
 }
 
-func (suite *UserControllerTestSuite) TestLogin_Failure() {
-	reqBody := dto.LoginRequest{Username: "user", Password: "wrongpassword"}
-	suite.mockUserUseCase.On("Login", "user", "wrongpassword").Return("", errors.New("invalid credentials"))
+func (suite *ControllerTestSuite) TestRegister_InvalidRequest() {
+	reqBody := dto.RegisterUserRequest{
+		Username: "",
+		Password: "password123",
+	}
 
-	body, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(body))
+	jsonBody, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/register", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
 
+	w := httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
+}
+
+func (suite *ControllerTestSuite) TestRegister_UseCaseError() {
+	suite.mockUserUseCase.On("Register", mock.AnythingOfType("domain.User")).Return(nil, domain.ErrDuplicateEntry)
+
+	reqBody := dto.RegisterUserRequest{
+		Username: "testuser",
+		Password: "password123",
+	}
+
+	jsonBody, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/register", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
+
+	suite.mockUserUseCase.AssertExpectations(suite.T())
+}
+
+func (suite *ControllerTestSuite) TestLogin_Success() {
+	suite.mockUserUseCase.On("Login", "testuser", "password123").Return("jwt-token", nil)
+
+	reqBody := dto.LoginRequest{
+		Username: "testuser",
+		Password: "password123",
+	}
+
+	jsonBody, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/login", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+
+	var response dto.LoginResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "jwt-token", response.Token)
+
+	suite.mockUserUseCase.AssertExpectations(suite.T())
+}
+
+func (suite *ControllerTestSuite) TestLogin_InvalidCredentials() {
+	suite.mockUserUseCase.On("Login", "testuser", "wrongpassword").Return("", domain.ErrInvalidCredentials)
+
+	reqBody := dto.LoginRequest{
+		Username: "testuser",
+		Password: "wrongpassword",
+	}
+
+	jsonBody, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/login", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
 	suite.router.ServeHTTP(w, req)
 
 	assert.Equal(suite.T(), http.StatusUnauthorized, w.Code)
+
 	suite.mockUserUseCase.AssertExpectations(suite.T())
 }
 
-func TestUserControllerTestSuite(t *testing.T) {
-	suite.Run(t, new(UserControllerTestSuite))
+func (suite *ControllerTestSuite) TestGetAllTasks_Success() {
+	tasks := []domain.Task{
+		{
+			ID:          "1",
+			Title:       "Task 1",
+			Description: "Description 1",
+			Status:      "pending",
+			DueDate:     time.Now().Add(24 * time.Hour),
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		},
+	}
+
+	suite.mockTaskUseCase.On("GetAllTasks").Return(tasks, nil)
+
+	req := httptest.NewRequest("GET", "/tasks", nil)
+	w := httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+
+	var response []dto.TaskResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(suite.T(), err)
+	assert.Len(suite.T(), response, 1)
+	assert.Equal(suite.T(), "Task 1", response[0].Title)
+
+	suite.mockTaskUseCase.AssertExpectations(suite.T())
+}
+
+func (suite *ControllerTestSuite) TestGetAllTasks_Error() {
+	suite.mockTaskUseCase.On("GetAllTasks").Return(nil, domain.ErrNotFound)
+
+	req := httptest.NewRequest("GET", "/tasks", nil)
+	w := httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusInternalServerError, w.Code)
+
+	suite.mockTaskUseCase.AssertExpectations(suite.T())
+}
+
+func (suite *ControllerTestSuite) TestGetTaskByID_Success() {
+	task := domain.Task{
+		ID:          "1",
+		Title:       "Task 1",
+		Description: "Description 1",
+		Status:      "pending",
+		DueDate:     time.Now().Add(24 * time.Hour),
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	suite.mockTaskUseCase.On("GetTaskByID", "1").Return(&task, nil)
+
+	req := httptest.NewRequest("GET", "/tasks/1", nil)
+	w := httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+
+	var response dto.TaskResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "Task 1", response.Title)
+
+	suite.mockTaskUseCase.AssertExpectations(suite.T())
+}
+
+func (suite *ControllerTestSuite) TestGetTaskByID_NotFound() {
+	suite.mockTaskUseCase.On("GetTaskByID", "999").Return(nil, domain.ErrNotFound)
+
+	req := httptest.NewRequest("GET", "/tasks/999", nil)
+	w := httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusNotFound, w.Code)
+
+	suite.mockTaskUseCase.AssertExpectations(suite.T())
+}
+
+func (suite *ControllerTestSuite) TestCreateTask_Success() {
+	task := domain.Task{
+		ID:          "1",
+		Title:       "New Task",
+		Description: "New Description",
+		Status:      "pending",
+		DueDate:     time.Now().Add(24 * time.Hour),
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	suite.mockTaskUseCase.On("CreateTask", mock.AnythingOfType("domain.Task")).Return(&task, nil)
+
+	reqBody := dto.CreateTaskRequest{
+		Title:       "New Task",
+		Description: "New Description",
+		DueDate:     time.Now().Add(24 * time.Hour),
+		Status:      "pending",
+	}
+
+	jsonBody, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/tasks", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusCreated, w.Code)
+
+	var response dto.TaskResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "New Task", response.Title)
+
+	suite.mockTaskUseCase.AssertExpectations(suite.T())
+}
+
+func (suite *ControllerTestSuite) TestCreateTask_InvalidRequest() {
+	reqBody := dto.CreateTaskRequest{
+		Title:       "",
+		Description: "New Description",
+		DueDate:     time.Now().Add(24 * time.Hour),
+		Status:      "pending",
+	}
+
+	jsonBody, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/tasks", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+
+	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
+}
+
+func TestControllerTestSuite(t *testing.T) {
+	suite.Run(t, new(ControllerTestSuite))
 }

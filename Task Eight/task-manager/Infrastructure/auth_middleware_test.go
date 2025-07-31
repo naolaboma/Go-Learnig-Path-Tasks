@@ -3,7 +3,7 @@ package infrastructure
 import (
 	"net/http"
 	"net/http/httptest"
-	"task-manager/Domain"
+	domain "task-manager/Domain"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +11,6 @@ import (
 )
 
 func createTestToken(user *domain.User) string {
-	jwtSecret = []byte("test-secret-key")
 	authService := NewAuthService()
 	token, _ := authService.GenerateToken(user)
 	return token
@@ -20,8 +19,9 @@ func createTestToken(user *domain.User) string {
 func setupRouterForMiddlewareTest() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
+	authService := NewAuthService()
 	adminRoutes := r.Group("/admin")
-	adminRoutes.Use(AuthMiddleware())
+	adminRoutes.Use(AuthMiddleware(authService))
 	adminRoutes.Use(AdminOnly())
 	{
 		adminRoutes.GET("/test", func(c *gin.Context) {
@@ -42,7 +42,7 @@ func TestMiddlewareIntegration(t *testing.T) {
 	})
 
 	t.Run("Non-Admin User on Admin Route", func(t *testing.T) {
-		user := &domain.User{ID: "user-1", Role: domain.RoleUser}
+		user := &domain.User{ID: "user-1", Username: "testuser", Role: domain.RoleUser}
 		token := createTestToken(user)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest(http.MethodGet, "/admin/test", nil)
@@ -52,7 +52,7 @@ func TestMiddlewareIntegration(t *testing.T) {
 	})
 
 	t.Run("Admin User on Admin Route", func(t *testing.T) {
-		admin := &domain.User{ID: "admin-1", Role: domain.RoleAdmin}
+		admin := &domain.User{ID: "admin-1", Username: "admin", Role: domain.RoleAdmin}
 		token := createTestToken(admin)
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest(http.MethodGet, "/admin/test", nil)
